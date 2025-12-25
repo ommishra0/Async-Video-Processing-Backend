@@ -4,6 +4,25 @@ A high-performance, asynchronous video processing system built with **FastAPI**,
 
 ## 🚀 Concept
 Heavy video processing (resizing, transcoding) blocks the main thread. This project implements a **Queue Architecture**:
+
+```mermaid
+graph TD
+    User([User]) -->|POST /upload| API[FastAPI API]
+    API -->|Save| TempStore[(Local Disk/Temp)]
+    API -->|Create Record| DB[(SQLite DB)]
+    API -->|Send Task| Redis[Redis Queue]
+    API -->|202 Accepted| User
+    
+    Redis -->|Task Message| Worker[Celery Worker]
+    Worker -->|Read| TempStore
+    Worker -->|Process| FFmpeg[FFmpeg Resize]
+    FFmpeg -->|Save| FinalStore[(Processed Folder)]
+    Worker -->|Update Status| DB
+    
+    User -->|GET /status| API
+    API -->|Poll| DB
+```
+
 1. **API**: Accepts the upload and returns a Job ID immediately.
 2. **Redis**: Acts as the message broker.
 3. **Celery Worker**: Picks up the job, runs FFmpeg in a separate process, and updates the DB.
